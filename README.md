@@ -15,7 +15,7 @@ Recommended you use virtualenv
 
 ```
 pip install virtualenv
-git clone https://github.com/mreider/gng
+git clone git@github.com:mreider/gng.git
 cd gng
 virtualenv .
 source bin/activate
