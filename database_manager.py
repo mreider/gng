@@ -67,8 +67,6 @@ class Database:
         return self.session.query(ProductFile.filename).filter(ProductFile.filename.in_(files)).all()
 
 
-
-
 Base = declarative_base()
 
 
@@ -90,3 +88,4 @@ class ProductFile(Base):
     id = Column(Integer,primary_key=True)
     release_id = Column(Integer,ForeignKey('release.id'),primary_key=True)
     filename = Column(String)
+    download_url = Column(String)
