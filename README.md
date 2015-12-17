@@ -3,20 +3,22 @@ Grab-N-Go - a little python tool to download files from Pivotal Network and uplo
 
 ## Setup
 
+Python uses a package manager called pip - you will need this to install everything. Test if you have it by typing `pip` on a command line. If you don't have it try:
+
+```
+$ sudo easy_install pip
+```
+
+If that doesn't work - go read [this](http://www.dabapps.com/blog/introduction-to-pip-and-virtualenv-python/). If you have dependency or permission problems your best bet is to use virtualenv (described in that link).
+
+You need to edit conf.toml and enter your Pivotal Network API key:
+
 Get your Pivotal Network API Key by logging into http://network.pivotal.io - it's at the bottom of your profile page.
 
 Edit the conf.toml file and replace the dummy key:
 
 ```
 api_key = "AG_u1blahblahblahMHqnF"
-```
-
-Recommended you use virtualenv
-
-```
-git clone git@github.com:mreider/gng.git
-cd gng
-pip install -r requirements.txt
 ```
 
 ## Update local product list
