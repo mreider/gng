@@ -74,3 +74,5 @@ elif "upload" in vargs and vargs["upload"]:
             exit(-1)
     else:
         print("Path is required")
+else:
+    parser.print_help()
