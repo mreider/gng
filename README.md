@@ -52,7 +52,7 @@ Now you have a list of files to download. Create a download directory and run th
 
 ```
 mkdir tmp
-$ python gng.py --download [download-list-filename] --path tmp
+$ python gng.py --download [download-list-filename] --path [file-path]
 ```
 
 ## Upload all the files to all the Ops Managers
@@ -70,9 +70,9 @@ username = "admin"
 password = "monkeyhead8"
 ```
 
-With this file we can upload some files to Ops Managers of your choice:
+The upload command is as follows:
 
 ```
-$ python gng.py --upload opsmanager.toml --path tmp
+$ python gng.py --upload [ops-manager-list-toml-file] --path [file-path-of-downloaded-files]
 ```
 
