@@ -1,0 +1,5 @@
+pycurl==7.19.5.3
+requests==2.8.1
+SQLAlchemy==1.0.10
+tabulate==0.7.5
+toml==0.9.1
