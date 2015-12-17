@@ -2,6 +2,7 @@ import zipfile
 
 from database_manager import Database, Product, Release, ProductFile
 
+
 import os, json
 import toml
 import requests
@@ -12,6 +13,8 @@ from tabulate import tabulate
 all_products_url = '/api/v2/products'
 end_point = 'https://network.pivotal.io'
 
+proxies = {
+}
 
 
 class PivNetUploader:
@@ -44,15 +47,22 @@ class PivNetUploader:
                 c.setopt(pycurl.USERPWD, "%s:%s" % (username ,password))
             if "url" in opsman:
                 c.setopt(c.URL, "https://" + opsman["url"] + "/api/products")
-            c.setopt(pycurl.VERBOSE, 1)
+            c.setopt(pycurl.VERBOSE, 0)
             c.setopt(c.SSL_VERIFYPEER, 0)
             c.setopt(c.SSL_VERIFYHOST, 0)
+
+            c.setopt(c.NOPROGRESS, 0)
+            c.setopt(c.PROGRESSFUNCTION, self.progress)
 
             files = os.listdir(dest_path)
             for filename in files:
                 full_path = os.path.join(dest_path,filename)
                 c.setopt(c.HTTPPOST, [('product[file]', ( c.FORM_FILE, full_path,)),])
                 c.perform()
+
+    def progress(self,download_t, download_d, upload_t, upload_d):
+        if upload_t > 0:
+            print(" Uploaded so far {per}%".format(per=int(upload_d*100/upload_t)))
 
 class PivNetDownloader:
     def __init__(self,api_key):
@@ -77,7 +87,7 @@ class PivNetDownloader:
             product_id,slug = self.database.get_product_details(name)
             # print('slug=%s,version=%s,file=%s'%(slug,release_version,file_name))
             data = self.database.get_release_id(slug,release_version)
-            # print(data)
+            print(data)
             if data:
                 release_id = data[0]
                 file_data = self.database.get_file_id(release_id,file_name)
@@ -90,7 +100,7 @@ class PivNetDownloader:
 
     def acceptEULA(self, product_id, release_id):
         url = self.secure_url + "/api/v2/products/" + str(product_id) + "/releases/" + str(release_id) + "/eula_acceptance"
-        r = requests.post(url, headers=self.secure_headers)
+        r = requests.post(url, headers=self.secure_headers,proxies=proxies)
         return r
 
 
@@ -100,9 +110,9 @@ class PivNetDownloader:
         url = self.secure_url + "/api/v2/products/" + str(product_id) + "/releases/" + str(
             release_id) + "/product_files/" + str(file_id) + "/download"
         # print(url)
-        r = requests.post(url, headers=self.secure_headers, stream=True)
+        r = requests.post(url, headers=self.secure_headers, stream=True,proxies=proxies)
         # print(download_path)
-        print("Downloading %s from %s"%(file_name,url))
+        print("Going to download %s from %s"%(file_name,url))
         full_path = os.path.join(download_path,file_name)
         with open(full_path, 'wb') as f:
             for chunk in r.iter_content(chunk_size=1024):
@@ -149,7 +159,7 @@ class PivNetUpdater:
         self.database = Database()
 
     def update_db(self):
-        self.database.clear_all_tables();
+        self.database.clear_all_tables()
         reader = codecs.getreader("utf-8")
         conf = "conf.toml"
         if not os.path.exists(conf):
@@ -193,14 +203,14 @@ class PivNetUpdater:
 
     def getProducts(self):
         url = self.url + "/api/v2/products/"
-        r = requests.get(url, headers = self.headers)
+        r = requests.get(url, headers = self.headers,proxies=proxies)
         data = json.loads(r.content.decode('utf-8'))
 
         return data.get('products')
 
     def getReleases(self, slug):
         url = self.url + "/api/v2/products/" + slug + "/releases"
-        r = requests.get(url, headers=self.headers)
+        r = requests.get(url, headers=self.headers,proxies=proxies)
         data = json.loads(r.content.decode('utf-8'))
         releases = data.get('releases')
         # print(releases)
@@ -209,6 +219,6 @@ class PivNetUpdater:
 
     def getProductFiles(self, product_id, release_id):
         url = self.url + "/api/v2/products/" + str(product_id) + "/releases/" + str(release_id) + "/product_files"
-        r = requests.get(url, headers=self.headers)
+        r = requests.get(url, headers=self.headers,proxies=proxies)
         data = json.loads(r.content.decode('utf-8'))
         return data.get('product_files')
