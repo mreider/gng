@@ -2,8 +2,6 @@ import zipfile
 
 from database_manager import Database, Product, Release, ProductFile
 
-__author__ = 'jijoy'
-
 import os, json
 import toml
 import requests
