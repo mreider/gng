@@ -3,6 +3,14 @@ Grab-N-Go - a little python tool to download files from Pivotal Network and uplo
 
 ## Setup
 
+Get your Pivotal Network API Key by logging into http://network.pivotal.io and looking at the bottom of your profile page.
+
+Once you have your key, edit the conf.toml file and replace the dummy key:
+
+```
+api_key = "AG_u1blahblahblahMHqnF"
+```
+
 Recommended you use virtualenv
 
 ```
