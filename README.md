@@ -53,7 +53,7 @@ Elastic Runtime                           1.6.8                       cf-1.6.8.p
 Now you have a list of files to download. Create a download directory and run the download command as follows:
 
 ```
-mkdir tmp
+$ mkdir tmp
 $ python gng.py --download [download-list-filename] --path [file-path]
 ```
 
