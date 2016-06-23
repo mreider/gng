@@ -1,16 +1,41 @@
 import argparse
 
-import toml,os
+#import toml
+import pytoml as toml
+import os
 from argparse import ArgumentParser
 from pivnet import PivNetUpdater, DBDumper, PivNetDownloader, PivNetUploader
 
 parser = ArgumentParser()
-parser.add_argument("--update",action='store_true',help="updates a local sqlite database of all products, releases, and files from Pivotal Network")
-parser.add_argument("--dump-list",nargs=1,metavar='filename',action="store",help="Create a list of files from the local sql lite database so user can cut / paste the files they want to download")
-parser.add_argument("--download",nargs=1,metavar="filename",help="Parse the user-created file of downloads and download them to a path")
-parser.add_argument("--upload",nargs=1,metavar="filename",help="Scan a path of files, make sure they are valid (or ignore w/ --force) and upload to Ops Managers")
-parser.add_argument("--path",nargs=argparse.REMAINDER,metavar="path",help="Path to which either upload or download will happen")
-parser.add_argument("--force",action="store_true",help="Forcing to updload the files which are not existing in DB")
+parser.add_argument(
+    "--update",
+    action='store_true',
+    help="updates a local sqlite database of all products, releases, and files from Pivotal Network")
+parser.add_argument(
+    "--dump-list",
+    nargs=1,
+    metavar='filename',
+    action="store",
+    help="Create a list of files from the local sql lite database so user can cut / paste the files they want to download")
+parser.add_argument(
+    "--download",
+    nargs=1,
+    metavar="filename",
+    help="Parse the user-created file of downloads and download them to a path")
+parser.add_argument(
+    "--upload",
+    nargs=1,
+    metavar="filename",
+    help="Scan a path of files, make sure they are valid (or ignore w/ --force) and upload to Ops Managers")
+parser.add_argument(
+    "--path",
+    nargs=argparse.REMAINDER,
+    metavar="path",
+    help="Path to which either upload or download will happen")
+parser.add_argument(
+    "--force",
+    action="store_true",
+    help="Forcing to updload the files which are not existing in DB")
 
 conf = "conf.toml"
 args = parser.parse_args()
@@ -22,7 +47,7 @@ if "update" in vargs and vargs["update"]:
         print(msg)
 elif "dump_list" in vargs and vargs["dump_list"]:
     filename = vargs["dump_list"][0]
-    print("Going to dump list to "+filename)
+    print("Going to dump list to " + filename)
     DBDumper().dump_list(filename)
 elif "download" in vargs and vargs["download"]:
     if not os.path.exists(conf):
@@ -44,7 +69,7 @@ elif "download" in vargs and vargs["download"]:
         if not os.path.exists(download_path):
             print("Path is not valid")
             exit(-1)
-        PivNetDownloader(api_key).download_files(filename,download_path)
+        PivNetDownloader(api_key).download_files(filename, download_path)
     else:
         print("Path is required")
 elif "upload" in vargs and vargs["upload"]:
@@ -53,10 +78,11 @@ elif "upload" in vargs and vargs["upload"]:
         print('ops manager target list is required')
         exit(-1)
     try:
-        with open(filename) as conffile:
-            opsmgr_config = toml.loads(conffile.read())
+        with open(filename, 'rb') as conffile:
+            opsmgr_config = toml.load(conffile)
 
-    except Exception:
+    except Exception as e:
+        print('Error: %s, %s' % (e.message, e.args))
         print('Incorrect TOML format')
         exit(-1)
 
@@ -66,9 +92,9 @@ elif "upload" in vargs and vargs["upload"]:
             print("Path is not valid")
             exit(-1)
 
-        # print(type(upload_folder))
-        force = vargs["force"]
-        msg = PivNetUploader().upload_files(config=opsmgr_config,folder_path=upload_folder,force=force)
+        force = "force" in vargs
+        msg = PivNetUploader().upload_files(
+            config=opsmgr_config, folder_path=upload_folder, force=force)
         if msg:
             print(msg)
             exit(-1)

@@ -47,24 +47,43 @@ class Database:
     def commit(self):
         self.session.commit()
 
-    def get_product_details(self,slug):
+    def get_product_details(self, slug):
         # print(slug)
-        data = self.session.query(Product.id,Product.slug).filter(Product.name==slug).first()
+        data = self.session.query(
+            Product.id, Product.slug).filter(
+            Product.name == slug).first()
         # print(data)
         return data
-    def get_release_id(self,product_slug,version):
+
+    def get_release_id(self, product_slug, version):
         # print(product_slug)
         # print(version)
-        data = self.session.query(Release.id).filter(Release.product_slug == product_slug).filter(Release.version==version.strip()).first()
+        data = self.session.query(
+            Release.id).filter(
+            Release.product_slug == product_slug).filter(
+            Release.version == version.strip()).first()
         # print(data)
         return data
-    def get_file_id(self,release_id,file_name):
+
+    def get_file_details(self, release_id, file_name):
         # print(release_id)
         # print(file_name)
-        return self.session.query(ProductFile.id).filter(ProductFile.release_id==release_id).filter(ProductFile.filename==file_name).first()
+        data = self.session.query(
+            ProductFile.id,
+            ProductFile.release_id,
+            ProductFile.filename,
+            ProductFile.download_url,
+            ProductFile.md5,
+            ProductFile.release_date).filter(
+            ProductFile.release_id == release_id).filter(
+            ProductFile.filename == file_name).first()
+        # print(data)
+        return data
 
-    def check_file_exists(self,files):
-        return self.session.query(ProductFile.filename).filter(ProductFile.filename.in_(files)).all()
+    def check_file_exists(self, file):
+        return self.session.query(
+            ProductFile.filename).filter(
+            ProductFile.filename == file).first()
 
 
 Base = declarative_base()
@@ -72,20 +91,23 @@ Base = declarative_base()
 
 class Product(Base):
     __tablename__ = 'product'
-    id = Column(Integer,primary_key=True)
+    id = Column(Integer, primary_key=True)
     slug = Column(String)
     name = Column(String)
 
 
 class Release(Base):
     __tablename__ = 'release'
-    id = Column(Integer,primary_key=True)
-    product_slug = Column(String,ForeignKey('product.slug'))
+    id = Column(Integer, primary_key=True)
+    product_slug = Column(String, ForeignKey('product.slug'))
     version = Column(String)
+
 
 class ProductFile(Base):
     __tablename__ = 'product_file'
-    id = Column(Integer,primary_key=True)
-    release_id = Column(Integer,ForeignKey('release.id'),primary_key=True)
+    id = Column(Integer, primary_key=True)
+    release_id = Column(Integer, ForeignKey('release.id'), primary_key=True)
     filename = Column(String)
     download_url = Column(String)
+    md5 = Column(String)
+    release_date = Column(String)
