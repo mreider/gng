@@ -41,8 +41,19 @@ conf = "conf.toml"
 args = parser.parse_args()
 vargs = vars(args)
 # print(vargs)
+
+if not os.path.exists(conf):
+    print("no valid conf.toml with key")
+    exit(-1)
+with open(conf) as conffile:
+    config = toml.loads(conffile.read())
+api_key = config.get('api_key')
+if not api_key or len(api_key) <= 0:
+    print("no valid conf.toml with key")
+    exit(-1)
+
 if "update" in vargs and vargs["update"]:
-    msg = PivNetUpdater().update_db()
+    msg = PivNetUpdater(api_key).update_db()
     if msg:
         print(msg)
 elif "dump_list" in vargs and vargs["dump_list"]:
@@ -50,15 +61,6 @@ elif "dump_list" in vargs and vargs["dump_list"]:
     print("Going to dump list to " + filename)
     DBDumper().dump_list(filename)
 elif "download" in vargs and vargs["download"]:
-    if not os.path.exists(conf):
-        print("no valid confi.toml with key")
-        exit(-1)
-    with open(conf) as conffile:
-        config = toml.loads(conffile.read())
-    api_key = config.get('api_key')
-    if not api_key or len(api_key) <= 0:
-        print("no valid confi.toml with key")
-        exit(-1)
     filename = vargs["download"][0]
     if not os.path.exists(filename):
         print('download list is required')

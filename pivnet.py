@@ -1,7 +1,7 @@
 import zipfile
 
 from database_manager import Database, Product, Release, ProductFile
-
+from sqlalchemy import exc
 
 import os
 import json
@@ -11,6 +11,7 @@ import codecs
 import pycurl
 import csv
 import hashlib
+import sys
 
 all_products_url = '/api/v2/products'
 end_point = 'https://network.pivotal.io'
@@ -98,6 +99,8 @@ class PivNetDownloader:
             'Accept': 'application/json',
             'Authorization': 'Token token=' + self.token}
         self.database = Database()
+#         print('token=%s, secure_url=%s, headers=%s, secure_headers=%s' %
+#             (self.token, self.secure_url, self.headers, self.secure_headers))
 
     def download_files(self, file_name, download_path):
         with open(file_name) as infile:
@@ -144,7 +147,7 @@ class PivNetDownloader:
                                 break
                         if md5 != md5_download:
                             print(
-                                'MD5 PivNet does not match download (%s != %s' %
+                                'MD5 PivNet does not match download (%s != %s)' %
                                 (md5, md5_download))
 
     def acceptEULA(self, product_id, release_id):
@@ -158,8 +161,6 @@ class PivNetDownloader:
             url,
             file_name,
             download_path):
-        if not os.path.exists("product_files"):
-            os.makedirs("product_files")
         sig = hashlib.md5()
         r = requests.post(
             url,
@@ -228,95 +229,196 @@ class DBDumper:
 
 class PivNetUpdater:
 
-    def __init__(self):
-        self.url = 'https://network.pivotal.io'
-        self.headers = {'content-type': 'application/json'}
+    def __init__(self, api_key):
+        self.token = api_key
+        self.secure_url = end_point
+        self.secure_headers = {
+            'content-type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': 'Token token=' + self.token}
         self.database = Database()
+#         print('token=%s, secure_url=%s, secure_headers=%s' %
+#             (self.token, self.secure_url, self.secure_headers))
 
     def update_db(self):
         self.database.clear_all_tables()
-        reader = codecs.getreader("utf-8")
-        conf = "conf.toml"
-        if not os.path.exists(conf):
-            return "no valid confi.toml with key"
-        with open(conf) as conffile:
-            config = toml.loads(conffile.read())
-        api_key = config.get('api_key')
-        if not api_key or len(api_key) <= 0:
-            return "no valid confi.toml with key"
         products = self.getProducts()
         for product in products:
             product_id = product.get('id')
             slug = product.get('slug')
             pname = product.get('name')
-            p = Product(id=product_id, slug=slug, name=pname)
+            p_file_groups = product.get('_links').get(
+                'file_groups').get('href')
+            p_product_files = product.get('_links').get(
+                'product_files').get('href')
+            p = Product(
+                id=product_id,
+                slug=slug,
+                name=pname,
+                file_groups_url=p_file_groups,
+                product_files_url=p_product_files)
             self.database.session.add(p)
-            # print('id=%s,slug=%s,name=%s' % (product_id, slug, pname))
-            # print('Found %s' % slug)
+            self.database.commit()
+#             print(
+#                 'Found product %s,%s,%s,%s,%s' %
+#                 (product_id,
+#                  slug,
+#                  pname,
+#                  p_file_groups,
+#                  p_product_files))
+#             if p_file_groups:
+#                 p_groups = self.getFileGroups(p_file_groups)
+#                 if p_groups:
+#                     for p_group in p_groups:
+#                         print(
+#                             json.dumps(
+#                                 p_group,
+#                                 sort_keys=True,
+#                                 indent=4))
+#             if p_product_files:
+#                 p_files = self.getProductFiles(p_product_files)
+#                 if p_files:
+#                     for p_file in p_files:
+#                         print(
+#                             json.dumps(
+#                                 p_file,
+#                                 sort_keys=True,
+#                                 indent=4))
             releases = self.getReleases(slug)
             if releases:
                 for release in releases:
                     rid = release.get('id')
                     version = release.get('version')
-                    r = Release(id=rid, version=version, product_slug=p.slug)
+                    r_file_groups = release.get('_links').get(
+                        'file_groups').get('href')
+                    r_product_files = release.get('_links').get(
+                        'product_files').get('href')
+                    r = Release(
+                        id=rid,
+                        version=version,
+                        product_slug=p.slug,
+                        file_groups_url=r_file_groups,
+                        product_files_url=r_product_files)
                     self.database.session.add(r)
-                    # print('Found %s,%s' % (slug, version))
-                    # print('id=%s,version=%s,slud=%s' % (rid, version, p.id))
-                    files = self.getProductFiles(product_id, rid)
-                    if files:
-                        for file in files:
-                            file_id = file.get('id')
-                            file_detail = self.getProductFile(
-                                product_id, rid, file_id)
-                            # print(file_detail)
-                            links = file_detail.get('_links')
-                            url = links.get('download').get('href')
-                            name = file_detail.get(
-                                'aws_object_key').split('/')[-1]
-                            md5 = file_detail.get('md5').lower()
-                            released_at = file_detail.get('released_at')
-                            f = ProductFile(
-                                id=file_id,
-                                release_id=r.id,
-                                filename=name,
-                                download_url=url,
-                                md5=md5,
-                                release_date=released_at)
-                            # print(
-                            #     'id=%s,releasid=%s,filename=%s,url=%s,md5=%s,date=%s' %
-                            #     (f.id, r.id, name, url, md5, released_at))
-                            self.database.session.add(f)
-                            # print('Found %s,%s,%s' % (slug, version, name))
-            self.database.commit()
-        self.database.commit()
+                    self.database.commit()
+#                     print(
+#                         'Found release %s,%s,%s,%s,%s' %
+#                         (rid, version, p.slug, r_file_groups, r_product_files))
+                    if r_file_groups:
+                        groups = self.getFileGroups(r_file_groups)
+                        if groups:
+                            for group in groups:
+                                self.addFiles(group.get('product_files'), product_id, rid)
+                    self.addFiles(self.getProductFiles(r_product_files), product_id, rid)
         print("Local Pivotal Network db has been updated.")
 
-    def getProducts(self):
-        url = self.url + "/api/v2/products/"
-        r = requests.get(url, headers=self.headers, proxies=proxies)
-        data = json.loads(r.content.decode('utf-8'))
+    def addFiles(self, files, product_id, rid):
+        if files:
+            for file in files:
+                try:
+                    file_id = file.get('id')
+                    file_detail = self.getProductFile(
+                        product_id, rid, file_id)
+                    url = file_detail.get('_links').get('download').get('href')
+                    name = file_detail.get(
+                        'aws_object_key').split('/')[-1]
+                    md5 = file_detail.get('md5').lower()
+                    released_at = file_detail.get('released_at')
+                    f = ProductFile(
+                        id=file_id,
+                        release_id=rid,
+                        filename=name,
+                        download_url=url,
+                        md5=md5,
+                        release_date=released_at)
+                    # print(
+                    #     'file id=%s,release id=%s,filename=%s,url=%s,md5=%s,date=%s' %
+                    #     (f.id, r.id, name, url, md5, released_at))
+                    self.database.session.add(f)
+                    self.database.commit()
+                except exc.IntegrityError:
+                    self.database.session.rollback()
+                    print('Duplicate: %s' % (file_detail))
+                except:
+                    print('addFile (%s, %s, %s) exception: %s' % (product_id, rid, file_id, sys.exc_info()[0]))
+#                     print(
+#                         json.dumps(
+#                             file,
+#                             sort_keys=True,
+#                             indent=4))
+#                     print(
+#                         json.dumps(
+#                             file_detail,
+#                             sort_keys=True,
+#                             indent=4))
 
-        return data.get('products')
+    def getProducts(self):
+        url = self.secure_url + "/api/v2/products/"
+        for i in range(0, 3):
+            try:
+                r = requests.get(url, headers=self.secure_headers, proxies=proxies)
+                data = json.loads(r.content.decode('utf-8'))
+                # print('getProducts %s' % (url))
+                # print(json.dumps(data, sort_keys=True, indent=4))
+                products = data.get('products')
+                return products
+            except requests.exceptions.RequestException as e:
+                print('getProducts (i=%s) %s e=%s' % (i, url, e))
+        print('getProducts giving up after %s tries' % (i))
 
     def getReleases(self, slug):
-        url = self.url + "/api/v2/products/" + slug + "/releases"
-        r = requests.get(url, headers=self.headers, proxies=proxies)
-        data = json.loads(r.content.decode('utf-8'))
-        releases = data.get('releases')
-        # print(releases)
-        return releases
+        url = self.secure_url + "/api/v2/products/" + slug + "/releases"
+        for i in range(0, 3):
+            try:
+                r = requests.get(url, headers=self.secure_headers, proxies=proxies)
+                data = json.loads(r.content.decode('utf-8'))
+                # print('getReleases %s' % (url))
+                # print(json.dumps(data, sort_keys=True, indent=4))
+                releases = data.get('releases')
+                return releases
+            except requests.exceptions.RequestException as e:
+                print('getReleases (i=%s) %s e=%s' % (i, url, e))
+        print('getReleases giving up after %s tries' % (i))
 
-    def getProductFiles(self, product_id, release_id):
-        url = self.url + "/api/v2/products/" + \
-            str(product_id) + "/releases/" + str(release_id) + "/product_files"
-        r = requests.get(url, headers=self.headers, proxies=proxies)
-        data = json.loads(r.content.decode('utf-8'))
-        return data.get('product_files')
+    def getFileGroups(self, url):
+        for i in range(0, 3):
+            try:
+                r = requests.get(url, headers=self.secure_headers, proxies=proxies)
+                data = json.loads(r.content.decode('utf-8'))
+                # print('getFileGroups %s' % (url))
+                # print(json.dumps(data, sort_keys=True, indent=4))
+                file_groups = data.get('file_groups')
+                return file_groups
+            except requests.exceptions.RequestException as e:
+                print('getFileGroups (i=%s) %s e=%s' % (i, url, e))
+        print('getFileGroups giving up after %s tries' % (i))
+
+    def getProductFiles(self, url):
+        for i in range(0, 3):
+            try:
+                r = requests.get(url, headers=self.secure_headers, proxies=proxies)
+                data = json.loads(r.content.decode('utf-8'))
+                # print('getProductFiles %s' % (url))
+                # print(json.dumps(data, sort_keys=True, indent=4))
+                product_files = data.get('product_files')
+                return product_files
+            except requests.exceptions.RequestException as e:
+                print('getProductFiles (i=%s) %s e=%s' % (i, url, e))
+        print('getProductFiles giving up after %s tries' % (i))
 
     def getProductFile(self, product_id, release_id, file_id):
-        url = self.url + '/api/v2/products/' + str(product_id) \
+        url = self.secure_url + '/api/v2/products/' + str(product_id) \
             + '/releases/' + str(release_id) + '/product_files/' \
             + str(file_id)
-        r = requests.get(url, headers=self.headers, proxies=proxies)
-        data = json.loads(r.content.decode('utf-8'))
-        return data.get('product_file')
+#         print(url)
+        for i in range(0, 3):
+            try:
+                r = requests.get(url, headers=self.secure_headers, proxies=proxies)
+                data = json.loads(r.content.decode('utf-8'))
+                # print('getProductFile %s' % (url))
+                # print(json.dumps(data, sort_keys=True, indent=4))
+                product_file = data.get('product_file')
+                return product_file
+            except requests.exceptions.RequestException as e:
+                print('getProductFile (i=%s) %s e=%s' % (i, url, e))
+        print('getProductFile giving up after %s tries' % (i))

@@ -94,6 +94,8 @@ class Product(Base):
     id = Column(Integer, primary_key=True)
     slug = Column(String)
     name = Column(String)
+    file_groups_url = Column(String)
+    product_files_url = Column(String)
 
 
 class Release(Base):
@@ -101,6 +103,8 @@ class Release(Base):
     id = Column(Integer, primary_key=True)
     product_slug = Column(String, ForeignKey('product.slug'))
     version = Column(String)
+    file_groups_url = Column(String)
+    product_files_url = Column(String)
 
 
 class ProductFile(Base):

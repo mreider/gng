@@ -3,13 +3,7 @@ Grab-N-Go - a little python tool to download files from Pivotal Network and uplo
 
 ## Setup
 
-Python uses a package manager called pip - you will need this to install everything. Test if you have it by typing `pip` on a command line. If you don't have it try:
-
-```
-$ sudo easy_install pip
-```
-
-If that doesn't work - go read [this](http://www.dabapps.com/blog/introduction-to-pip-and-virtualenv-python/). If you have dependency or permission problems your best bet is to use virtualenv (described in that link).
+Python 3.5.1 and pip 8.1.2 were used for this release. MacOS ships with Python 2.7, so you will want to install the later version of python and pip. Visit [python.org](https://www.python.org/downloads/) for the latest downloads of python, and [pypa.io](https://pip.pypa.io/en/stable/installing/) for pip. You should put the later version in a different bin directory than those used by the system (e.g., `/usr/local/bin`). I added a couple aliases, `alias pip='pip3.5'` `alias python='python3.5'` to avoid the accedential use of the system python.
 
 You need to edit `conf.toml` and enter your Pivotal Network API key:
 
@@ -18,7 +12,7 @@ Get your Pivotal Network API Key by logging into http://network.pivotal.io - it'
 Edit the `conf.toml` file and replace the dummy key:
 
 ```
-api_key = "AG_u1blahblahblahMHqnF"
+api_key = "BlahBlahBlahBlah"
 ```
 
 ## Update local product list
@@ -36,6 +30,45 @@ The database created by update now has over 1000 records. Dump list outputs CSV,
 ```
 $ python gng.py --dump-list [filename.csv]
 ```
+
+## Update and dump at night
+The helper script `gngupdate.sh` is useful to run from `launchd` or `cron`. Following is an example lauchd script, which you would place in `/Users/someone/Library/LaunchAgents/net.example.launched.gng.plist`.
+
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/Library/Frameworks/Python.framework/Versions/3.5/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/someone/bin</string>
+	</dict>
+	<key>Label</key>
+	<string>net.example.launched.gng</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/someone/Documents/PivotalCF/gng/gngupdate.sh</string>
+	</array>
+	<key>StandardErrorPath</key>
+	<string>/Users/someone/Documents/PivotalCF/gngupdate.stderr</string>
+	<key>StandardOutPath</key>
+	<string>/Users/someone/Documents/PivotalCF/gngupdate.stdout</string>
+	<key>StartCalendarInterval</key>
+	<array>
+		<dict>
+			<key>Hour</key>
+			<integer>1</integer>
+			<key>Minute</key>
+			<integer>13</integer>
+		</dict>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>/Users/someone/Documents/PivotalCF</string>
+</dict>
+</plist>
+```
+To help out the PivNet operators, please change the time to something while you are sleeping.
 
 ## Cut and paste the files you want to download
 
@@ -93,12 +126,12 @@ In support of keeping the source looking consistent as it changes, please use [a
 * Robust error handling
 * Evaluate [Requests](http://docs.python-requests.org/) verses [PycURL](http://pycurl.io), a [post](http://stackoverflow.com/questions/15461995/python-requests-vs-pycurl-performance) to get started
 * Handle Stemcells
-* Update needs to handle File Groups on PivNet
 * Dump list needs a "newer than date" option
 * Upload needs to check if file already exists on Ops Manager before uploading to avoid "meta-data" error, and the waste of bandwidth
 * auth_token expires, should check token is stll valid before iterating through the upgrades
 * PycURL may timeout, while Ops Manager processes a large upgrade such as elastic runtime (rare, but error has been seen, perhaps caused by LB between utility and Ops Manager)
 * Investigate if Ops Manager 1.6 and earlier need to be supported
+* Once MD5 is returned by the release API, the call to `get_file_details` won't be needed. Currently, this will save over 5300 requests.
 
  
 
