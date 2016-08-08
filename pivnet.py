@@ -112,9 +112,14 @@ class PivNetDownloader:
                 file_name = row[2].strip()
 
                 data = self.database.get_product_details(name)
-                # print(data)
-                product_id = data[0]
-                slug = data[1]
+                if data:
+                    # print(data)
+                    product_id = data[0]
+                    slug = data[1]
+                else:
+                    print('Could not get product details for %s' % (name))
+                    continue
+
                 # print(
                 #     'slug=%s,version=%s,file=%s' %
                 #     (slug, release_version, file_name))
@@ -149,6 +154,14 @@ class PivNetDownloader:
                             print(
                                 'MD5 PivNet does not match download (%s != %s)' %
                                 (md5, md5_download))
+                    else:
+                        print(
+                            'Could not get release ID for release ID=%s, file name=%s' %
+                            (release_id, file_name))
+                else:
+                    print(
+                        'Could not get file details for slug=%s, version=%s' %
+                        (slug, release_version))
 
     def acceptEULA(self, product_id, release_id):
         url = self.secure_url + "/api/v2/products/" + \
@@ -308,8 +321,10 @@ class PivNetUpdater:
                         groups = self.getFileGroups(r_file_groups)
                         if groups:
                             for group in groups:
-                                self.addFiles(group.get('product_files'), product_id, rid)
-                    self.addFiles(self.getProductFiles(r_product_files), product_id, rid)
+                                self.addFiles(
+                                    group.get('product_files'), product_id, rid)
+                    self.addFiles(self.getProductFiles(
+                        r_product_files), product_id, rid)
         print("Local Pivotal Network db has been updated.")
 
     def addFiles(self, files, product_id, rid):
@@ -340,7 +355,9 @@ class PivNetUpdater:
                     self.database.session.rollback()
                     print('Duplicate: %s' % (file_detail))
                 except:
-                    print('addFile (%s, %s, %s) exception: %s' % (product_id, rid, file_id, sys.exc_info()[0]))
+                    print(
+                        'addFile (%s, %s, %s) exception: %s' %
+                        (product_id, rid, file_id, sys.exc_info()[0]))
 #                     print(
 #                         json.dumps(
 #                             file,
@@ -356,7 +373,8 @@ class PivNetUpdater:
         url = self.secure_url + "/api/v2/products/"
         for i in range(0, 3):
             try:
-                r = requests.get(url, headers=self.secure_headers, proxies=proxies)
+                r = requests.get(
+                    url, headers=self.secure_headers, proxies=proxies)
                 data = json.loads(r.content.decode('utf-8'))
                 # print('getProducts %s' % (url))
                 # print(json.dumps(data, sort_keys=True, indent=4))
@@ -370,7 +388,8 @@ class PivNetUpdater:
         url = self.secure_url + "/api/v2/products/" + slug + "/releases"
         for i in range(0, 3):
             try:
-                r = requests.get(url, headers=self.secure_headers, proxies=proxies)
+                r = requests.get(
+                    url, headers=self.secure_headers, proxies=proxies)
                 data = json.loads(r.content.decode('utf-8'))
                 # print('getReleases %s' % (url))
                 # print(json.dumps(data, sort_keys=True, indent=4))
@@ -383,7 +402,8 @@ class PivNetUpdater:
     def getFileGroups(self, url):
         for i in range(0, 3):
             try:
-                r = requests.get(url, headers=self.secure_headers, proxies=proxies)
+                r = requests.get(
+                    url, headers=self.secure_headers, proxies=proxies)
                 data = json.loads(r.content.decode('utf-8'))
                 # print('getFileGroups %s' % (url))
                 # print(json.dumps(data, sort_keys=True, indent=4))
@@ -396,7 +416,8 @@ class PivNetUpdater:
     def getProductFiles(self, url):
         for i in range(0, 3):
             try:
-                r = requests.get(url, headers=self.secure_headers, proxies=proxies)
+                r = requests.get(
+                    url, headers=self.secure_headers, proxies=proxies)
                 data = json.loads(r.content.decode('utf-8'))
                 # print('getProductFiles %s' % (url))
                 # print(json.dumps(data, sort_keys=True, indent=4))
@@ -413,7 +434,8 @@ class PivNetUpdater:
 #         print(url)
         for i in range(0, 3):
             try:
-                r = requests.get(url, headers=self.secure_headers, proxies=proxies)
+                r = requests.get(
+                    url, headers=self.secure_headers, proxies=proxies)
                 data = json.loads(r.content.decode('utf-8'))
                 # print('getProductFile %s' % (url))
                 # print(json.dumps(data, sort_keys=True, indent=4))
